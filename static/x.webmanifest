@@ -4,7 +4,7 @@
   "description": "X offline.",
   "start_url": "/x",
   "scope": "/",
-  "display": "fullscreen",
+  "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
   "display_override": ["window-controls-overlay"],

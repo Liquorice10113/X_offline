@@ -173,7 +173,7 @@ def dl_worker():
             url = dl_Q.pop(0)
             name = os.path.split(url)[-1]
             current = url
-            cmd = "gallery-dl {0} -C ./twitter.com_cookies.txt --write-metadata -D {1}".format(
+            cmd = "gallery-dl {0} -C ./cookies.txt --write-metadata -D {1}".format(
                 url, os.path.join(config.fs_base, name))
             if config.proxy:
                 cmd += " --proxy '{0}'".format(config.proxy)

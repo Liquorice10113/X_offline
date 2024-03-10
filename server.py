@@ -22,6 +22,8 @@ app = Flask(__name__)
 
 meta = {"users": dict(), "posts": dict(), "tl": dict(), "loaded": set()}
 
+if not os.path.exists(config.fs_base):
+    os.makedirs(config.fs_base)
 
 def dump_meta():
     global meta
