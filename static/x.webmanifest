@@ -1,0 +1,22 @@
+{
+  "name": "X_Offline",
+  "short_name": "X_o",
+  "description": "X offline.",
+  "start_url": "/x",
+  "scope": "/",
+  "display": "fullscreen",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "display_override": ["window-controls-overlay"],
+  "icons": [
+    {
+      "src": "default_avatar.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "launch_handler": {
+    "route_to": "existing-client",
+    "navigate_existing_client": "never"
+  }
+}
