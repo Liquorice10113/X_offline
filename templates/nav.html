@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>{{title}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="{{url_base}}/css/nav.css" />
+    <link rel="stylesheet" href="{{url_base}}/css/timeline.css" />
+    <link rel="stylesheet" href="{{url_base}}/css/userlist.css" />
+    <link rel="stylesheet" href="{{url_base}}/css/userpage.css" />
+    <link rel="manifest" href="{{url_base}}/mt.webmanifest" crossorigin="use-credentials">
+    <meta name="msapplication-TileColor" content="rgb(0,0,0)">
+    <meta name="theme-color" content="rgb(0,0,0)">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <style>
+        body {
+            background-color: #000;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container_outer" id="container_outer">
+        <div class="container">
+            {{ content | safe }}
+        </div>
+    </div>
+    <div class="nav">
+        <div class="nav_item_warp">
+            <a class="nav_item {% if section=='users' %}nav_item_selected{% endif %}" href="{{url_base}}/">
+                {% if alt_home_icon %}
+                <img src="{{alt_home_icon}}" class="alt_home_icon" />
+                {% else %}
+                <img src="{{url_base}}/img/home.svg" />
+                {% endif %}
+            </a>
+            <a class="nav_item {% if section=='tl' %}nav_item_selected{% endif %}" href="{{url_base}}/tl">
+                <img src="{{url_base}}/img/timeline.svg" />
+            </a>
+            <a class="nav_item {% if section=='rd' %}nav_item_selected{% endif %}" href="{{url_base}}/random">
+                <img src="{{url_base}}/img/rd.svg" />
+            </a>
+            <a class="nav_item {% if section=='fav' %}nav_item_selected{% endif %}" href="{{url_base}}/fav">
+                <img src="{{url_base}}/img/bookmark_empty.svg" />
+            </a>
+            <a class="nav_item {% if section=='download' %}nav_item_selected{% endif %}" href="{{url_base}}/download">
+                <img src="{{url_base}}/img/dl.svg" />
+            </a>
+        </div>
+    </div>
+    <div class="page_control" id="page_control">
+        <div class="page_control_warp">
+            <div class="page_control_item" id="btn_prev" onclick="prev_page()">
+                <img src="{{url_base}}/img/left.svg" />
+            </div>
+            <div class="page_control_item" id="page_text" onclick="go_page()">{{ current_page }}/{{ max_page }}</div>
+            <div class="page_control_item" id="btn_next" onclick="next_page()">
+                <img src="{{url_base}}/img/right.svg" />
+            </div>
+        </div>
+    </div>
+    <button class="back-to-top" onclick="scrollToTop()">
+        <img src="{{url_base}}/img/left.svg" />
+    </button>
+
+    <script>
+        var current_page = {{ current_page }};
+        var current_q = "{{ current_q }}";
+        var max_page = {{ max_page }};
+        var current_url = "{{current_url}}";
+
+        const search_bar_input = document.getElementById("search_bar_input");
+
+        if (current_q) {
+            current_url = current_url + "?q=" + current_q;
+            if (search_bar_input)
+                search_bar_input.value = current_q;
+        }
+
+        function search() {
+            var q = search_bar_input.value;
+            //rip exsiting q
+            if (current_url.includes("?")) {
+                current_url = current_url.split("?")[0];
+            }
+            if (q) {
+                window.location.href = current_url + "?q=" + q;
+            }
+            else {
+                window.location.href = current_url;
+            }
+        }
+
+        function execute_on_enter(e, func) {
+            if (e.key === "Enter") {
+                func();
+                e.preventDefault();
+            }
+        }
+
+        var page_control = document.getElementById("page_control");
+
+        if (max_page <= 1) {
+            page_control.style.display = "none";
+        }
+
+        function next_page() {
+            if (current_page < max_page) {
+                if (current_url.includes("?")) {
+                    window.location.href = current_url + "&p=" + (current_page + 1);
+                } else {
+                    window.location.href = current_url + "?p=" + (current_page + 1);
+                }
+            }
+        }
+
+        function prev_page() {
+            if (current_page > 1) {
+                if (current_url.includes("?")) {
+                    window.location.href = current_url + "&p=" + (current_page - 1);
+                } else {
+                    window.location.href = current_url + "?p=" + (current_page - 1);
+                }
+            }
+        }
+
+        function go_page() {
+            page_num = prompt("Page number", "");
+
+            if (isNaN(page_num)) {
+                alert("Please enter a valid number");
+            }
+
+            if (!page_num) {
+                return;
+            }
+
+            page_num = Math.min(Math.max(page_num, 0), max_page)
+            if (current_url.includes("?")) {
+                window.location.href = current_url + "&p=" + page_num;
+            } else {
+                window.location.href = current_url + "?p=" + page_num;
+            }
+        }
+
+        function add_fav(post_id) {
+            fetch('{{url_base}}/add_fav?post_id=' + post_id, {
+                method: 'GET'
+            }).then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    fav_div = document.getElementById("p"+post_id+"_fav")
+                    if (data['result']=='added') {
+                        fav_div.src = "{{url_base}}/img/bookmark.svg";
+                    }
+                    else {
+                        fav_div.src = "{{url_base}}/img/bookmark_empty.svg";
+                    }
+                })
+        }
+        function scrollToTop() {
+            document.getElementById('container_outer').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        //pass wheel event of body to container
+        // document.body.addEventListener("wheel", function (e) {
+        //     var container = document.querySelector(".container");
+        //     container.scrollTop += e.deltaY;
+        // });
+
+    </script>
+</body>
+
+</html>

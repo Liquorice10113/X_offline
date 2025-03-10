@@ -1,0 +1,87 @@
+.user_header_full{
+    position: relative;
+}
+
+.user_header_banner {
+    width: 100%;
+    height: 11.5rem;
+    object-fit: cover;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.user_header_img {
+    height: 6rem;
+    width: 6rem;
+    margin-left: 1rem;
+    margin-top: -3rem;
+    border-radius: 1rem;
+    border: #222 0.3rem solid;
+}
+
+.user_header {
+    position: relative;
+    margin-top: -0.4rem;
+    background-color: #222;
+    margin-bottom: 1rem;
+    border-radius: 0 0 0.5rem 0.5rem;
+    padding-bottom: 1rem;
+}
+
+.user_header_title {
+    font-size: larger;
+}
+
+.user_header_date {
+    font-size: smaller;
+    opacity: 0.7;
+}
+
+.user_header_txt {
+    margin-left: 1rem;
+}
+
+.user_body_text {
+    margin-left: 1rem;
+    margin-top: 0.5rem;
+}
+
+.user_header_button{
+    position: absolute;
+    right: 1rem;
+    top: 0.5rem;
+    height: 2rem;
+    width: 2rem;
+    border-radius: 3rem;
+    background-color: #333;
+}
+
+.user_header_button img{
+    opacity: 0.7;
+    margin-left: 0.3rem;
+    margin-top: 0.3rem;
+    height: 1.4rem;
+    width: 1.4rem;
+}
+
+.media_toggle{
+    width: 100%;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.toggle {
+    display: inline-block;
+    border: 0.1rem solid #999;
+    color: #999;
+    height: 1.8rem;
+    line-height: 1.8rem;
+    width: 4rem;
+    border-radius: 2rem;
+    font-size: 0.8rem;
+}
+
+.toggle_selected {
+    background-color: #333;
+    border: 0.1rem solid #333;
+    color: #fff;
+}

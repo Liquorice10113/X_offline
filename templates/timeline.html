@@ -1,117 +1,70 @@
-<html>
-
-<head>
-    <meta charset="utf-8" />
-    <link rel="stylesheet" href="/{{base}}/static/style.css" type="text/css">
-    <link rel="manifest" href="/{{base}}/static/x.webmanifest" crossorigin="use-credentials" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-</head>
-
-<body style="background-color: black;">
-    <div id="header">
-        <a href="/{{base}}">
-            <svg style="fill: #fff;" viewBox="0 0 24 24" aria-hidden="true"
-                class="r-4qtqp9 r-yyyyoo r-dnmrzs r-bnwqim r-1plcrui r-lrvibr r-1nao33i r-lwhw9o r-cnnz9e">
-                <g>
-                    <path
-                        d="M21.591 7.146L12.52 1.157c-.316-.21-.724-.21-1.04 0l-9.071 5.99c-.26.173-.409.456-.409.757v13.183c0 .502.418.913.929.913h6.638c.511 0 .929-.41.929-.913v-7.075h3.008v7.075c0 .502.418.913.929.913h6.639c.51 0 .928-.41.928-.913V7.904c0-.301-.158-.584-.408-.758zM20 20l-4.5.01.011-7.097c0-.502-.418-.913-.928-.913H9.44c-.511 0-.929.41-.929.913L8.5 20H4V8.773l8.011-5.342L20 8.764z">
-                    </path>
-                </g>
-            </svg>
+{% for post_id in sorted_posts_id %}
+<div class="card" id="p{{post_id}}">
+    <div class="card_header">
+        <a href="{{url_base}}/user/{{posts[post_id].type}}/{{posts[post_id].user_name}}">
+            <img class="card_header_img"
+                src="{{url_base}}/avatar/{{posts[post_id].type}}/{{posts[post_id].user_name}}" />
+            <div class="header_txt">
+                <div class="card_header_title">{{users[posts[post_id].user_name].nick[:20]}}
+                    <span class="card_header_name">@{{posts[post_id].user_name}}</span>
+                </div>
+                <div class="card_header_date">{{posts[post_id].time}}</div>
+            </div>
         </a>
     </div>
-    <div class="nav">
-        <a href="/{{base}}/tl?p={{nav[0]}}" class="prev">←</a>
-        <div class="nav_indi" onclick="toggle_page_select()">{{nav[1]}}/{{nav[3]}}</div><a
-            href="/{{base}}/tl?p={{nav[2]}}" class="next">→</a>
-    </div>
-    <div id="content" style="padding-top: 6rem;">
-        <div id="posts_container">
-            {% for twt_id in sorted_posts %}
-            <div class="post">
-                <a style="text-decoration: none;color: #fff;" href="/{{base}}/u/{{posts[twt_id]['name']}}">
-                    <div class="post_header">
-                        <img class="avatar_small" src="/{{base}}/avatar/{{posts[twt_id]['name']}}"></img>
-                        <div class="nick_small">{{posts[twt_id]['nick']}}</div>
-                        <div class="name_small">@{{posts[twt_id]['name']}} · {{posts[twt_id]['date']}}
-                        </div>
-                    </div>
-                </a>
-                <div class="text">{{posts[twt_id]['text']|safe}}</div>
-                {% for img in posts[twt_id]['imgs'] %}
-                <a href="/{{base}}/large/{{posts[twt_id]['name']}}/{{img}}" class="thumb">
-                    <img src="/{{base}}/thumb/{{posts[twt_id]['name']}}/{{img}}" loading="lazy"></img>
-                </a>
-                {% endfor %}
-                {% for vid in posts[twt_id]['vids'] %}
-                <video controls class="vid" preload="none" loop
-                    poster="/{{base}}/thumb/{{posts[twt_id]['name']}}/{{vid}}">
-                    <source src="/{{base}}/full/{{posts[twt_id]['name']}}/{{vid}}">
-                    Your browser does not support the video tag.
-                </video>
-                {% endfor %}
-                <a href="https://twitter.com/{{posts[twt_id]['name']}}/status/{{twt_id}}" target="_blank">
-                    <div class="stastic">
-                        <div class="reply_cnt"><svg viewBox="0 0 24 24" aria-hidden="true"
-                                class="r-4qtqp9 r-yyyyoo r-dnmrzs r-bnwqim r-1plcrui r-lrvibr r-1xvli5t r-1hdv0qi">
-                                <g>
-                                    <path
-                                        d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z">
-                                    </path>
-                                </g>
-                            </svg><span>{{posts[twt_id]['reply']}}</span></div>
-                        <div class="ret_cnt"><svg viewBox="0 0 24 24" aria-hidden="true"
-                                class="r-4qtqp9 r-yyyyoo r-dnmrzs r-bnwqim r-1plcrui r-lrvibr r-1xvli5t r-1hdv0qi">
-                                <g>
-                                    <path
-                                        d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z">
-                                    </path>
-                                </g>
-                            </svg><span>{{posts[twt_id]['ret']}}</span></div>
-                        <div class="like_cnt"><svg viewBox="0 0 24 24" aria-hidden="true"
-                                class="r-4qtqp9 r-yyyyoo r-dnmrzs r-bnwqim r-1plcrui r-lrvibr r-1xvli5t r-1hdv0qi">
-                                <g>
-                                    <path
-                                        d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z">
-                                    </path>
-                                </g>
-                            </svg><span>{{posts[twt_id]['fav']}}</span></div>
-                        <div class=""></div>
-                    </div>
-                </a>
-            </div>
-            {% endfor %}
+    <div class="card_body">
+        <div class="card_body_text">
+            {{posts[post_id].text_content | safe}}
         </div>
-        <a id="next_bottom" href="/{{base}}/tl?p={{nav[2]}}">→</a>
-    </div>
-    <div id="page_select">
-        {% for p in range(nav[3]) %}
-        <a class="page_select_item" {% if (p+1)==nav[1] %} id="selected_item" {% endif %}
-            href="/{{base}}/tl?p={{p+1}}">{{p+1}}</a>
+        {% for media in media_entries[post_id] %}
+        {% if media.isvideo %}
+        <div style="position: relative;">
+            <a
+                onclick="show_media_viewer('{{url_base}}/file/{{posts[post_id].type}}/{{posts[post_id].user_name}}/{{media.file_name}}', true)">
+                <img class="card_media"
+                    src="{{url_base}}/thumb/{{posts[post_id].type}}/{{posts[post_id].user_name}}/{{media.file_name}}"
+                    loading="lazy" style="object-fit: contain;background-color: black;" />
+                <div class="video_icon">
+                    <img src="{{url_base}}/img/play.svg" />
+                </div>
+            </a>
+        </div>
+
+        {% else %}
+        <a
+            onclick="show_media_viewer('{{url_base}}/file/{{posts[post_id].type}}/{{posts[post_id].user_name}}/{{media.file_name}}', false)">
+            <img class="card_media"
+                src="{{url_base}}/file/{{posts[post_id].type}}/{{posts[post_id].user_name}}/{{media.file_name}}"
+                loading="lazy" />
+        </a>
+        {% endif %}
         {% endfor %}
     </div>
-    <!-- <div id="img_large_container" onclick="toggle_img_large()" >
-        <img src="" id="img_large" />
-        <a id="download_img" onclick="event.stopPropagation()">⇪</a>
-    </div> -->
-    <script>
-        var base = "/{{base}}/";
-        // img_large_container = document.getElementById("img_large_container")
-        // setInterval(function () {
-        //     if (window.location.hash != "#img_large") {
-        //         img_large_container.style.display = "none"
-        //         document.body.style.overflow = "scroll"
-        //         img_l = 0
-        //     }
-        // }, 100);
-    </script>
-    <script src="/{{base}}/static/script.js"></script>
-    <script>
-        content = document.getElementById("content")
-        nav = document.getElementsByClassName("nav")[0]
-        window_resize()
-        document.body.onresize = window_resize
-    </script>
-</body>
+    <div class="card_footer">
+        <a class="card_footer_item" href="{{posts[post_id].url}}" target="_blank">
+            <img src="{{url_base}}/img/like.svg" />
+            <span>{{posts[post_id].likes}}</span>
+        </a>
+        <a class="card_footer_item" href="{{posts[post_id].url}}" target="_blank">
+            <img src="{{url_base}}/img/comment.svg" />
+            <span>{{posts[post_id].comments}}</span>
+        </a>
+        <a class="card_footer_item" href="{{posts[post_id].url}}" target="_blank">
+            <img src="{{url_base}}/img/repost.svg" />
+            <span>{{posts[post_id].reposts}}</span>
+        </a>
+        <a class="card_footer_item" onclick="add_fav('{{post_id}}')">
+            {% if posts[post_id].fav %}
+            <img src="{{url_base}}/img/bookmark.svg" id="p{{post_id}}_fav"/>
+            {% else %}
+            <img src="{{url_base}}/img/bookmark_empty.svg" id="p{{post_id}}_fav"/>
+            {% endif %}
+        </a>
+    </div>
+    <a href="{{posts[post_id].url}}" class="card_link" target="_blank">
+        <img src="{{url_base}}/img/link.svg" />
+    </a>
+</div>
+{% endfor %}
 
-</html>
+{% include 'viewer.html' %}

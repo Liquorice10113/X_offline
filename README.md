@@ -1,19 +1,16 @@
 # X_offline
-Download and view twitter/X content locally.
+Download and view twitter/X and bluesky content locally.
 
 WIP, not ready yet.
 
-
-![](res/s3.png)
-![](res/s4.png)
-![](res/s1.png)
-![](res/s2.png)
-![](res/m.jpg)
+![](res/e1.png)
+![](res/e2.png)
+![](res/e3.png)
 
 ### Requirement 
-- Python lib `flask`,`gallery-dl`
+- Python lib `flask`,`gallery-dl`,`natsort`
 
-- `cookies.txt` from twitter/X, try [get-cookiestxt-locally](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc).
+- `cookies.txt` from twitter/X if possible, try [get-cookiestxt-locally](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc).
 
 - `ffmpeg` (optional)
 
@@ -23,5 +20,5 @@ Edit `config.py`.
 
 ### Run
 ```
-python3 server.py
+python3 app.py
 ```

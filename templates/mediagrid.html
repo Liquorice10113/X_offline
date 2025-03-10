@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="{{url_base}}/css/mediagrid.css" />
+<div class="media_grid">
+    {% for media_id in sorted_media_id %}
+    {% if media_entries[media_id].isvideo %}
+    <a class="media_grid_item" onclick="show_media_viewer('{{url_base}}/file/{{media_entries[media_id].type}}/{{media_entries[media_id].user_name}}/{{media_entries[media_id].file_name}}', true)">
+    {% else %}
+    <a class="media_grid_item" onclick="show_media_viewer('{{url_base}}/file/{{media_entries[media_id].type}}/{{media_entries[media_id].user_name}}/{{media_entries[media_id].file_name}}', false)">
+    {% endif %}
+        <img src="{{url_base}}/thumb/{{media_entries[media_id].type}}/{{media_entries[media_id].user_name}}/{{media_entries[media_id].file_name}}"
+        loading="lazy" oncontextmenu="show_float_card(event,'{{url_base}}/card/{{media_entries[media_id].type}}/{{media_entries[media_id].user_name}}/{{media_entries[media_id].file_name}}')" />
+        {% if media_entries[media_id].isvideo %}
+        <div class="video_icon">
+            <img src="{{url_base}}/img/play.svg" oncontextmenu="show_float_card(event,'{{url_base}}/card/{{media_entries[media_id].type}}/{{media_entries[media_id].user_name}}/{{media_entries[media_id].file_name}}')"/>
+        </div>
+        {% endif %}
+    </a>
+    {% endfor %}
+</div>
+
+{% include 'viewer.html' %}
+
+<div class="float_card" id="float_card"></div>
+<script>
+    const float_card = document.getElementById('float_card');
+
+    function show_float_card(e,card_content_url) {
+        fetch(card_content_url)
+            .then(response => response.text())
+            .then(data => {
+                float_card.innerHTML = data;
+                float_card.style.display = 'block';
+            });
+        e.preventDefault();
+    }
+
+    function hide_float_card() {
+        float_card.innerHTML = '';
+        float_card.style.display = 'none';
+    }
+
+</script>

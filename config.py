@@ -1,12 +1,16 @@
-port = 8888
+host = "0.0.0.0"
+port = 18088
+url_base = "" # "/x" for http://127.0.0.1:18088/x
 
-fs_base = "./twitter/"
-url_base = "x"
-cookes_txt = "./cookies.txt"
+cookies_list = {"x": "", "bsky": ""}
 
-thumbnail_big_size = 1280
-thumbnail_small_size = 400
+fs_bases = {
+    "x": "./twitter",
+    "bsky": "./bluesky",
+}
 
-items_per_page = 24
+cache_path = "~/.cache/x"
+thubnail_size = 256
 
-proxy = "127.0.0.1:10809"
+items_per_page = 30
+proxy = None
