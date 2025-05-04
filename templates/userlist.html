@@ -12,6 +12,9 @@
         <div class="user_card_body_text">
             {{user.description}}
         </div>
+        <div class="user_card_update_time">
+            Updated: {{user.get_update_time_str()}}
+        </div>
     </a>
     {% endfor %}
 </div>

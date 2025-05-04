@@ -1,3 +1,18 @@
+{% if show_sort_type %}
+<div class="media_toggle" id="sort_type">
+    <a class="toggle {%if sort_type=='new'%}toggle_selected{%endif%}" href="{{page_url}}?sort=new">New</a>
+    <a class="toggle {%if sort_type=='top'%}toggle_selected{%endif%}" href="{{page_url}}?sort=top">Top</a>
+    <a class="toggle {%if sort_type=='random'%}toggle_selected{%endif%}" href="{{page_url}}?sort=random">Random</a>
+</div>
+{% endif %}
+
+{% if show_media_toggle %}
+<div class="media_toggle">
+    <a class="toggle toggle_selected" href="{{page_url}}">Posts</a>
+    <a class="toggle" href="{{page_url}}?tab=media">Media</a>
+</div>
+{% endif %}
+
 {% for post_id in sorted_posts_id %}
 <div class="card" id="p{{post_id}}">
     <div class="card_header">
@@ -13,6 +28,11 @@
         </a>
     </div>
     <div class="card_body">
+        {% if posts[post_id].isreply %}
+        <a href="{{posts[post_id].url}}" target="_blank">
+            <img class="reply_icon" src="{{url_base}}/img/reply.svg" />
+        </a>
+        {% endif %}
         <div class="card_body_text">
             {{posts[post_id].text_content | safe}}
         </div>
@@ -20,7 +40,7 @@
         {% if media.isvideo %}
         <div style="position: relative;">
             <a
-                onclick="show_media_viewer('{{url_base}}/file/{{posts[post_id].type}}/{{posts[post_id].user_name}}/{{media.file_name}}', true)">
+                onclick="show_float_card(event,'{{url_base}}/card/{{posts[post_id].type}}/{{posts[post_id].user_name}}/{{media.file_name}}')">
                 <img class="card_media"
                     src="{{url_base}}/thumb/{{posts[post_id].type}}/{{posts[post_id].user_name}}/{{media.file_name}}"
                     loading="lazy" style="object-fit: contain;background-color: black;" />
@@ -29,10 +49,9 @@
                 </div>
             </a>
         </div>
-
         {% else %}
         <a
-            onclick="show_media_viewer('{{url_base}}/file/{{posts[post_id].type}}/{{posts[post_id].user_name}}/{{media.file_name}}', false)">
+            onclick="show_float_card(event,'{{url_base}}/card/{{posts[post_id].type}}/{{posts[post_id].user_name}}/{{media.file_name}}')">
             <img class="card_media"
                 src="{{url_base}}/file/{{posts[post_id].type}}/{{posts[post_id].user_name}}/{{media.file_name}}"
                 loading="lazy" />
@@ -40,6 +59,57 @@
         {% endif %}
         {% endfor %}
     </div>
+    {% if posts[post_id].embed %}
+    <div class="card_embed">
+        {% if posts[post_id].embed_obj.external %}
+        <a class="card_embed_url" href="{{posts[post_id].embed_url}}" target="_blank">
+            <img class="card_embed_img"
+                src="{{url_base}}/img/external.svg" />
+        </a>
+        {% else %}
+        <div class="card_header">
+            <a href="{{url_base}}/user/{{posts[post_id].type}}/{{posts[post_id].embed_obj.user_name}}">
+                <img class="card_header_img"
+                    src="{{url_base}}/avatar/{{posts[post_id].type}}/{{posts[post_id].embed_obj.user_name}}" />
+                <div class="header_txt">
+                    <div class="card_header_title">{{posts[post_id].embed_obj.nick[:20]}}
+                        <span class="card_header_name">@{{posts[post_id].embed_obj.user_name}}</span>
+                    </div>
+                    <div class="card_header_date">{{posts[post_id].embed_obj.time}}</div>
+                </div>
+            </a>
+        </div>
+        <div class="card_embed_text card_body_text">
+            {{posts[post_id].embed_obj.text_content | safe}}
+        </div>
+        {% for media in posts[post_id].embed_obj.medias %}
+        {% if media.isvideo %}
+        <div style="position: relative;">
+            <a
+                onclick="show_float_card(event,'{{url_base}}/card/{{posts[post_id].type}}/{{posts[post_id].embed_obj.user_name}}/{{media.file_name}}')">
+                <img class="card_media"
+                    src="{{url_base}}/thumb/{{posts[post_id].type}}/{{posts[post_id].embed_obj.user_name}}/{{media.file_name}}"
+                    loading="lazy" style="object-fit: contain;background-color: black;" />
+                <div class="video_icon">
+                    <img src="{{url_base}}/img/play.svg" />
+                </div>
+            </a>
+        </div>
+        {% else %}
+        <a
+            onclick="show_float_card(event,'{{url_base}}/card/{{posts[post_id].type}}/{{posts[post_id].embed_obj.user_name}}/{{media.file_name}}')">
+            <img class="card_media"
+                src="{{url_base}}/file/{{posts[post_id].type}}/{{posts[post_id].embed_obj.user_name}}/{{media.file_name}}"
+                loading="lazy" />
+        </a>
+        {% endif %}
+        {% endfor %}
+        <a href="{{posts[post_id].embed_obj.url}}" class="card_link" target="_blank" style="position: absolute;">
+            <img src="{{url_base}}/img/link.svg" />
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
     <div class="card_footer">
         <a class="card_footer_item" href="{{posts[post_id].url}}" target="_blank">
             <img src="{{url_base}}/img/like.svg" />
@@ -55,9 +125,9 @@
         </a>
         <a class="card_footer_item" onclick="add_fav('{{post_id}}')">
             {% if posts[post_id].fav %}
-            <img src="{{url_base}}/img/bookmark.svg" id="p{{post_id}}_fav"/>
+            <img src="{{url_base}}/img/bookmark.svg" class="p{{post_id}}_fav" />
             {% else %}
-            <img src="{{url_base}}/img/bookmark_empty.svg" id="p{{post_id}}_fav"/>
+            <img src="{{url_base}}/img/bookmark_empty.svg" class="p{{post_id}}_fav" />
             {% endif %}
         </a>
     </div>
@@ -66,5 +136,3 @@
     </a>
 </div>
 {% endfor %}
-
-{% include 'viewer.html' %}

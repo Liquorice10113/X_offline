@@ -2,6 +2,10 @@
     <input type="text" name="q" placeholder="url" id="url_input" onkeydown="execute_on_enter(event,()=>{add_url(true)})" />
     <img src="{{url_base}}/img/right.svg" onclick="add_url(true)" />
 </div>
+<div class="search_checkboxes">
+    <input type="checkbox" id="full" name="full" value="full">
+    <label for="full">Full</label>
+</div>
 
 <div class="msg" id="msg">
 </div>
@@ -14,8 +18,10 @@
     function add_url(add_flag) {
         var url = "";
         if (add_flag) url = document.getElementById('url_input').value;
+        full = document.getElementById('full').checked;
         var jsonData = {
-            'url': url
+            'url': url,
+            'full': full
         }
         fetch('{{url_base}}/add', {
             method: 'POST',
@@ -27,12 +33,15 @@
             .then(data => {
                 if (add_flag) document.getElementById('url_input').value = '';
                 document.getElementById('msg').innerHTML = data['msg'];
-                document.getElementById('current').innerHTML = data['current'];
+                if(data['current'])
+                    document.getElementById('current').innerHTML = data['current'];
+                else
+                    document.getElementById('current').innerHTML = 'Idle';
                 // alert(data['msg']);
                 // clear the queue
                 document.getElementById('queue').innerHTML = '';
                 data['queue'].forEach(function (item, index) {
-                    document.getElementById('queue').innerHTML += '<div class=\'job\'>' + item + '</div>';
+                    document.getElementById('queue').innerHTML += '<div class=\'job\'>' + item[0] + '</div>';
                 });
             })
     }

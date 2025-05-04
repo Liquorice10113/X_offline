@@ -1,16 +1,20 @@
 host = "0.0.0.0"
-port = 18088
-url_base = "" # "/x" for http://127.0.0.1:18088/x
+port = 8088
+url_base = "mt"
 
-cookies_list = {"x": "", "bsky": ""}
+# get cookies.txt from your browser!
+# cookies_list = {"x": "./x.com_cookies.txt", "bsky": ""} 
+cookies_list = {"x": "", "bsky": ""} 
 
 fs_bases = {
     "x": "./twitter",
     "bsky": "./bluesky",
 }
 
-cache_path = "~/.cache/x"
+cache_path = "~/.cache/mt"
 thubnail_size = 256
+
+custom_gallery_dl_location = "" #~/venv/bin/gallery-dl
 
 items_per_page = 30
 proxy = None

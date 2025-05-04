@@ -68,6 +68,16 @@
     overflow: hidden;
 }
 
+.user_card_update_time{
+    font-size: 0.75rem;
+    /* font-weight: bold; */
+    color: #ffffffaa;
+    text-wrap: nowrap;
+    margin-left: 1rem;
+    margin-bottom: 0.4rem;
+    text-shadow: 0rem 0rem 0.1rem #00000099;
+}
+
 .user_card_media {
     display: inline-block;
     width: 100%;

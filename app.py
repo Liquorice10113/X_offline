@@ -17,10 +17,12 @@ import natsort
 from urllib.parse import unquote, quote
 import posixpath
 from math import ceil, floor
-from random import sample
+from random import sample, randint
 from threading import Thread
 import argparse
 import requests
+import signal
+import sys
 
 import config, backend, utils
 
@@ -30,11 +32,9 @@ parser.add_argument(
     "--debug", action="store_true", help="Include this option to enable 'debug'."
 )
 
-parser.add_argument(
-    "--skip-scan", action="store_true", help="Skip startup scan."
-)
+parser.add_argument("--skip-scan", action="store_true", help="Skip startup scan.")
 
-args = parser.parse_args()
+args, unknown = parser.parse_known_args()
 args.debug = bool(args.debug)
 args.skip_scan = bool(args.skip_scan)
 
@@ -74,7 +74,7 @@ def _img(fn):
 
 @app.route(posixpath.join("/", config.url_base, "avatar", "<type>", "<name>"))
 def _avatar(type, name):
-    print(type, name)
+    # print(type, name)
     fn = f"{config.fs_bases[type]}/{name}/avatar"
     if not os.path.exists(fn):
         user = backend.User(name, type)
@@ -92,7 +92,7 @@ def _avatar(type, name):
 
 @app.route(posixpath.join("/", config.url_base, "banner", "<type>", "<name>"))
 def _banner(type, name):
-    print(type, name)
+    # print(type, name)
     fn = f"{config.fs_bases[type]}/{name}/banner"
     if not os.path.exists(fn):
         user = backend.User(name, type)
@@ -106,33 +106,46 @@ def _banner(type, name):
     return set_cache_header(send_file(fn, mimetype="image/jpeg"))
 
 
-@app.route(posixpath.join("/", config.url_base+"/"))
+@app.route(posixpath.join("/", config.url_base + "/"))
 @app.route(posixpath.join("/", config.url_base))
 def _index():
+    return redirect(posixpath.join("/", config.url_base, "tl"))
+
+
+@app.route(posixpath.join("/", config.url_base, "userlist"))
+def _userlist():
     if "p" in request.args:
         page = int(request.args["p"]) - 1
+        page = max(0, page)
     else:
         page = 0
     if "q" in request.args:
         query = request.args["q"]
     else:
         query = ""
-    all_users = backend.get_users(db)
     if query:
         all_users = [
             u
-            for u in all_users
+            for u in backend.all_users
             if query.lower() in u.nick.lower() or query.lower() in u.user_name.lower()
         ]
-    users = all_users[page * config.items_per_page : (page + 1) * config.items_per_page]
+        users = all_users[
+            page * config.items_per_page : (page + 1) * config.items_per_page
+        ]
+        max_page = ceil(len(all_users) / config.items_per_page)
+    else:
+        users = backend.all_users[
+            page * config.items_per_page : (page + 1) * config.items_per_page
+        ]
+        max_page = ceil(len(backend.all_users) / config.items_per_page)
     seach_bar = render_template("searchbar.html", url_base=config.url_base)
     userlist = render_template("userlist.html", users=users, url_base=config.url_base)
     return render_template(
         "nav.html",
         current_page=page + 1,
         current_q=query,
-        current_url=posixpath.join("/", config.url_base),
-        max_page=ceil(len(all_users) / config.items_per_page),
+        current_url=posixpath.join("/", config.url_base, "userlist"),
+        max_page=max_page,
         content=seach_bar + userlist,
         section="users",
         url_base=config.url_base,
@@ -141,33 +154,60 @@ def _index():
 
 @app.route(posixpath.join("/", config.url_base, "tl"))
 def _timeline():
-    if "p" in request.args:
-        page = int(request.args["p"]) - 1
-    else:
-        page = 0
     if "q" in request.args:
         query = request.args["q"]
+        query = query.strip()
     else:
         query = ""
+
+    if "p" in request.args:
+        page = int(request.args["p"]) - 1
+        page = max(0, page)
+        backend.timeline_current_page = page
+    else:
+        if query:
+            page = 0
+        else:
+            page = backend.timeline_current_page
+    if "tab" in request.args:
+        tab = request.args["tab"]
+    else:
+        tab = "posts"
+    if "sort" in request.args:
+        sort_ = request.args["sort"]
+    else:
+        sort_ = "new"
     if query:
         sorted_posts_id = db.query_post_by_text(query)
         all_post_count = len(sorted_posts_id)
         sorted_posts_id = sorted_posts_id[
             page * config.items_per_page : (page + 1) * config.items_per_page
         ]
-        sorted_posts_id = [ i[0] for i in sorted_posts_id ]
+        sorted_posts_id = [i[0] for i in sorted_posts_id]
     else:
         all_post_count = len(backend.cache_all_posts_id)
-        sorted_posts_id = backend.cache_all_posts_id[
-            page * config.items_per_page : (page + 1) * config.items_per_page
-        ]
-        sorted_posts_id = [ i[0] for i in sorted_posts_id ]
+        if sort_ == "new":
+            sorted_posts_id = backend.cache_all_posts_id[
+                page * config.items_per_page : (page + 1) * config.items_per_page
+            ]
+        elif sort_ == "top":
+            sorted_posts_id = backend.cache_all_posts_id_top[
+                page * config.items_per_page : (page + 1) * config.items_per_page
+            ]
+        elif sort_ == "random":
+            sorted_posts_id = backend.cache_all_posts_id_random[
+                page * config.items_per_page : (page + 1) * config.items_per_page
+            ]
+        else:
+            return "Invalid sort type."
+        sorted_posts_id = [i[0] for i in sorted_posts_id]
     posts = dict()
     media_entries = dict()
     users = dict()
     for post_id in sorted_posts_id:
         post = backend.Post(post_id, None, None)
         post.load_from_db(db)
+        post.init_embed(db)
         posts[post_id] = post
         for row in db.query_rows(table="media", key="post_id", value=post_id):
             media_id = row[0]
@@ -197,70 +237,25 @@ def _timeline():
         type="tl",
         users=users,
         url_base=config.url_base,
+        page_url=f"{config.url_base}/tl",
+        show_sort_type=True,
+        sort_type=sort_,
     )
     return render_template(
         "nav.html",
         content=seach_bar + timeline,
         current_page=page + 1,
         current_q=query,
-        current_url=posixpath.join("/", config.url_base, "tl"),
+        current_url=posixpath.join("/", config.url_base, "tl")
+        + "?tab="
+        + tab
+        + "&sort="
+        + sort_,
         max_page=ceil(all_post_count / config.items_per_page),
         section="tl",
         url_base=config.url_base,
     )
 
-
-@app.route(posixpath.join("/", config.url_base, "random"))
-def _timeline_random():
-    try:
-        sorted_posts_id = sample(backend.cache_all_posts_id, config.items_per_page)
-        sorted_posts_id = [ i[0] for i in sorted_posts_id ]
-    except ValueError:
-        return "Not enough posts. Download more and come back later."
-    posts = dict()
-    media_entries = dict()
-    users = dict()
-    for post_id in sorted_posts_id:
-        post = backend.Post(post_id, None, None)
-        post.load_from_db(db)
-        posts[post_id] = post
-        for row in db.query_rows(table="media", key="post_id", value=post_id):
-            media_id = row[0]
-            media = backend.Media(media_id, post_id, None, post.type)
-            media.load_from_db(db)
-            if post_id not in media_entries:
-                media_entries[post_id] = [media]
-            else:
-                media_entries[post_id].append(media)
-        if post_id in media_entries:
-            media_entries[post_id] = natsort.natsorted(
-                media_entries[post_id], key=lambda x: x.media_id
-            )
-        if post.user_name not in users:
-            user = backend.User(post.user_name, post.type)
-            user.load_from_db(db)
-            users[post.user_name] = user
-    timeline = render_template(
-        "timeline.html",
-        posts=posts,
-        media_entries=media_entries,
-        sorted_posts_id=sorted_posts_id,
-        page=0,
-        items_per_page=config.items_per_page,
-        user_name="",
-        type="",
-        users=users,
-        url_base=config.url_base,
-    )
-    return render_template(
-        "nav.html",
-        current_page=0,
-        current_url="",
-        max_page=0,
-        content=timeline,
-        section="rd",
-        url_base=config.url_base,
-    )
 
 @app.route(posixpath.join("/", config.url_base, "fav"))
 def _timeline_fav():
@@ -268,60 +263,114 @@ def _timeline_fav():
         page = int(request.args["p"]) - 1
     else:
         page = 0
+    if "tab" in request.args:
+        tab = request.args["tab"]
+    else:
+        tab = "posts"
     try:
-        sorted_posts_id = db.query_rows(table="fav", key="", value="")
+        sorted_posts_id = db.query_rows(
+            table="fav", key="", value="", ignore_cache=True
+        )
         all_post_count = len(sorted_posts_id)
-        sorted_posts_id = [ i[0] for i in sorted_posts_id if i[0] ][::-1]
-        sorted_posts_id = sorted_posts_id[
-            page * config.items_per_page : (page + 1) * config.items_per_page
-        ]
+        sorted_posts_id = [i[0] for i in sorted_posts_id if i[0]][::-1]
+        if tab == "posts":
+            sorted_posts_id = sorted_posts_id[
+                page * config.items_per_page : (page + 1) * config.items_per_page
+            ]
+        else:
+            sorted_posts_id = sorted_posts_id[
+                page
+                * config.items_per_page
+                * 2 : (page + 1)
+                * config.items_per_page
+                * 2
+            ]
     except ValueError:
         return "Not enough posts. Download more and come back later."
-    posts = dict()
-    media_entries = dict()
-    users = dict()
-    for post_id in sorted_posts_id:
-        post = backend.Post(post_id, None, None)
-        if not post.load_from_db(db):
-            return f"Post [{post_id}] not found."
-        posts[post_id] = post
-        for row in db.query_rows(table="media", key="post_id", value=post_id):
-            media_id = row[0]
-            media = backend.Media(media_id, post_id, None, post.type)
-            media.load_from_db(db)
-            if post_id not in media_entries:
-                media_entries[post_id] = [media]
-            else:
-                media_entries[post_id].append(media)
-        if post_id in media_entries:
-            media_entries[post_id] = natsort.natsorted(
-                media_entries[post_id], key=lambda x: x.media_id
-            )
-        if post.user_name not in users:
-            user = backend.User(post.user_name, post.type)
-            user.load_from_db(db)
-            users[post.user_name] = user
-    timeline = render_template(
-        "timeline.html",
-        posts=posts,
-        media_entries=media_entries,
-        sorted_posts_id=sorted_posts_id,
-        page=page,
-        items_per_page=config.items_per_page,
-        user_name="",
-        type="",
-        users=users,
-        url_base=config.url_base,
-    )
+
+    if tab == "posts":
+        posts = dict()
+        media_entries = dict()
+        users = dict()
+        for post_id in sorted_posts_id:
+            post = backend.Post(post_id, None, None)
+            if not post.load_from_db(db):
+                print(f"Post [{post_id}] not found.")
+                continue
+            post.init_embed(db)
+            posts[post_id] = post
+            for row in db.query_rows(table="media", key="post_id", value=post_id):
+                media_id = row[0]
+                media = backend.Media(media_id, post_id, None, post.type)
+                media.load_from_db(db)
+                if post_id not in media_entries:
+                    media_entries[post_id] = [media]
+                else:
+                    media_entries[post_id].append(media)
+            if post_id in media_entries:
+                media_entries[post_id] = natsort.natsorted(
+                    media_entries[post_id], key=lambda x: x.media_id
+                )
+            if post.user_name not in users:
+                user = backend.User(post.user_name, post.type)
+                user.load_from_db(db)
+                users[post.user_name] = user
+        timeline = render_template(
+            "timeline.html",
+            posts=posts,
+            media_entries=media_entries,
+            sorted_posts_id=sorted_posts_id,
+            page=page,
+            items_per_page=config.items_per_page,
+            user_name="",
+            type="",
+            users=users,
+            url_base=config.url_base,
+            page_url=f"{config.url_base}/fav",
+            show_media_toggle=True,
+        )
+        max_page = ceil(all_post_count / config.items_per_page)
+    elif tab == "media":
+        media_entries = dict()
+        users = dict()
+        sorted_media_id = []
+        for post_id in sorted_posts_id:
+            post = backend.Post(post_id, None, None)
+            if not post.load_from_db(db):
+                return f"Post [{post_id}] not found."
+            for row in db.query_rows(table="media", key="post_id", value=post_id):
+                media_id = row[0]
+                sorted_media_id.append(media_id)
+                media = backend.Media(media_id, post_id, None, post.type)
+                media.load_from_db(db)
+                media_entries[media_id] = media
+            if post.user_name not in users:
+                user = backend.User(post.user_name, post.type)
+                user.load_from_db(db)
+                users[post.user_name] = user
+        timeline = render_template(
+            "mediagrid.html",
+            media_entries=media_entries,
+            sorted_media_id=sorted_media_id,
+            page=page,
+            items_per_page=config.items_per_page * 2,
+            user_name="",
+            type=type,
+            users=users,
+            url_base=config.url_base,
+            page_url=f"{config.url_base}/fav",
+        )
+        max_page = ceil(all_post_count / config.items_per_page / 2)
     return render_template(
         "nav.html",
         current_page=page + 1,
-        current_url=posixpath.join("/", config.url_base, "fav"),
-        max_page=ceil(all_post_count / config.items_per_page),
+        current_url=posixpath.join("/", config.url_base, "fav") + "?tab=" + tab,
+        max_page=max_page,
         content=timeline,
         section="fav",
         url_base=config.url_base,
     )
+
 
 @app.route(posixpath.join("/", config.url_base, "user", "<type>", "<name>"))
 def _timeline_user(type, name):
@@ -336,22 +385,19 @@ def _timeline_user(type, name):
 
     user = backend.User(name, type)
     user.load_from_db(db)
-    userheader = render_template(
-        "userheader.html", type=type, user=user, tab=tab, url_base=config.url_base
-    )
 
     if tab == "posts":
         posts = dict()
         media_entries = dict()
 
-        all_rows = db.query_rows(table="posts", key="user_name", value=name)
-        rows = natsort.natsorted(all_rows, key=lambda x: x[0], reverse=True)
-        for row in rows[
+        all_rows = db.query_rows(table="posts", key="user_name", value=name, sort_key=lambda x: x[0])
+        for row in all_rows[
             page * config.items_per_page : (page + 1) * config.items_per_page
         ]:
             post_id = row[0]
             post = backend.Post(post_id, name, type)
             post.load_from_db(db)
+            post.init_embed(db)
             posts[post_id] = post
             for row in db.query_rows(table="media", key="post_id", value=post_id):
                 media_id = row[0]
@@ -377,6 +423,8 @@ def _timeline_user(type, name):
             type=type,
             users={f"{name}": user},
             url_base=config.url_base,
+            page_url=f"{config.url_base}/user/{type}/{name}",
+            show_media_toggle=True,
         )
         max_page = ceil(len(all_rows) / config.items_per_page)
     elif tab == "media":
@@ -385,7 +433,7 @@ def _timeline_user(type, name):
         all_rows = natsort.natsorted(all_rows, key=lambda x: x[1], reverse=True)
         sorted_media_id = []
         for row in all_rows[
-            page * config.items_per_page*2 : (page + 1) * config.items_per_page*2
+            page * config.items_per_page * 2 : (page + 1) * config.items_per_page * 2
         ]:
             media_id = row[0]
             post_id = row[1]
@@ -399,14 +447,21 @@ def _timeline_user(type, name):
             media_entries=media_entries,
             sorted_media_id=sorted_media_id,
             page=page,
-            items_per_page=config.items_per_page*2,
+            items_per_page=config.items_per_page * 2,
             user_name=name,
             type=type,
             users={f"{name}": user},
             url_base=config.url_base,
+            page_url=f"{config.url_base}/user/{type}/{name}",
         )
         max_page = ceil(len(all_rows) / config.items_per_page / 2)
-
+    userheader = render_template(
+        "userheader.html",
+        type=type,
+        user=user,
+        url_base=config.url_base,
+        posts_cnt=len(all_rows),
+    )
     return render_template(
         "nav.html",
         content=userheader + timeline,
@@ -419,12 +474,14 @@ def _timeline_user(type, name):
         alt_home_icon=posixpath.join("/", config.url_base, "avatar", type, name),
         title=f"{user.nick} (@{name}) - {type}",
         url_base=config.url_base,
+        user=user,
     )
+
 
 @app.route(posixpath.join("/", config.url_base, "add_fav"))
 def _add_fav():
     post_id = request.args["post_id"]
-    if db.query_rows(table="fav", key="post_id", value=post_id):
+    if db.query_rows(table="fav", key="post_id", value=post_id, ignore_cache=True):
         print("remove favorite", post_id)
         backend.remove_favorite(db, post_id)
         return {
@@ -436,6 +493,7 @@ def _add_fav():
         return {
             "result": "added",
         }
+
 
 @app.route(
     posixpath.join("/", config.url_base, "card", "<type>", "<name>", "<filename>")
@@ -488,10 +546,10 @@ def _file(type, name, fn):
 def _thumb(type, name, fn):
     size = config.thubnail_size
     if "size" in request.args:
-        size = int(request.args['size'])
-        size = min(max(size,32),2500)
+        size = int(request.args["size"])
+        size = min(max(size, 32), 2500)
     path = f"{config.fs_bases[type]}/{name}/{fn}"
-    thumbnail_path = utils.create_thumbnail(path,size)
+    thumbnail_path = utils.create_thumbnail(path, size)
     return set_cache_header(send_file(thumbnail_path, mimetype="image/jpeg"))
 
 
@@ -512,6 +570,7 @@ def _add_download_job():
     data = request.get_json()
     if "url" in data and data["url"]:
         url = data["url"]
+        full = data.get("full", False)
         if not ("bsky" in url or "x.com" in url or "twitter" in url):
             msg = f"Invalid URL: {url}\n"
             print(msg)
@@ -524,21 +583,22 @@ def _add_download_job():
             return jsonify(
                 {"msg": msg, "current": utils.current_url, "queue": utils.download_jobs}
             )
-        if re.match('\w+\.bsky\.social', url):
+        if re.match("\w+\.bsky\.social", url):
             url = "https://bsky.app/profile/" + url
         else:
             if not url.startswith("http"):
                 url = f"https://{url}"
             url = url.replace("http://", "https://")
-            if 'bsky' in url:
-                url = re.match("https://bsky.app/profile/[^/]+",url).group(0)
-            elif 'x.com' in url:
-                url = re.match("https://x.com/[^/]+",url).group(0)
-            elif 'twitter.com' in url:
-                url = re.match("https://twitter.com/[^/]+",url).group(0)
+            if "bsky" in url:
+                url = re.match("https://bsky.app/profile/[^/]+", url).group(0)
+            elif "x.com" in url:
+                url = re.match("https://x.com/[^/]+", url).group(0)
+            elif "twitter.com" in url:
+                url = re.match("https://twitter.com/[^/]+", url).group(0)
+                url = url.replace("twitter.com","x.com")
 
-        if not url in utils.download_jobs:
-            utils.download_jobs.append(url)
+        if not (url, full) in utils.download_jobs:
+            utils.download_jobs.append((url, full))
             msg = f"Added {url} to download queue.\n"
         else:
             msg = f"{url} already in download queue.\n"
@@ -550,24 +610,158 @@ def _add_download_job():
     )
 
 
+@app.route(posixpath.join("/", config.url_base, "shorts"), methods=["GET"])
+def _shorts():
+    if "idx" in request.args:
+        idx = int(request.args["idx"])
+    else:
+        idx = 0
+    if "user" in request.args:
+        user_name = request.args["user"]
+        if not user_name in backend.cache_user_media_id:
+            media_ids = db.raw_query(
+                f"SELECT media_id FROM media WHERE user_name = '{user_name}' AND file_name LIKE '%.mp4'"
+            )
+            media_ids = [i[0] for i in media_ids]
+            if len(media_ids) > 0:
+                media_ids = natsort.natsorted(media_ids)[::-1]
+                backend.cache_user_media_id[user_name] = media_ids
+            total_cnt = len(media_ids)
+        else:
+            total_cnt = len(backend.cache_user_media_id[user_name])
+        return render_template(
+            "shorts.html",
+            url_base=config.url_base,
+            user=user_name,
+            current_cnt=idx,
+            total_cnt=total_cnt,
+        )
+    else:
+        user_name = ""
+        idx = randint(0, len(backend.cache_all_media_id))
+        return render_template(
+            "shorts.html",
+            url_base=config.url_base,
+            current_cnt=idx,
+            user=user_name,
+            total_cnt=0,
+        )
+
+
+@app.route(posixpath.join("/", config.url_base, "get-a-vid"), methods=["GET"])
+def _get_a_vid():
+    if "user" in request.args:
+        user_name = request.args["user"]
+    else:
+        user_name = ""
+    if "idx" in request.args:
+        idx = int(request.args["idx"])
+    else:
+        idx = 0
+    if user_name:
+        # get a media_id from user by order
+        if not user_name in backend.cache_user_media_id:
+            media_ids = db.raw_query(
+                f"SELECT media_id FROM media WHERE user_name = '{user_name}' AND file_name LIKE '%.mp4'"
+            )
+            media_ids = [i[0] for i in media_ids]
+            media_ids = natsort.natsorted(media_ids)[::-1]
+            if not media_ids:
+                return {
+                    "error": f"No video found for user {user_name}.",
+                }
+            backend.cache_user_media_id[user_name] = media_ids
+        else:
+            print(f"cache hit for {user_name}")
+            media_ids = backend.cache_user_media_id[user_name]
+            print(len(media_ids), idx)
+        idx = idx % len(media_ids)
+        media_id = media_ids[idx]
+    else:
+        if len(backend.cache_all_media_id) == 0:
+            return {
+                "error": f"No video found.",
+            }
+        media_id = backend.cache_all_media_id[idx % len(backend.cache_all_media_id)]
+    media = backend.Media(media_id, None, None)
+    media.load_from_db(db)
+    post = backend.Post(media.post_id, None, None)
+    post.load_from_db(db)
+    user = backend.User(post.user_name, post.type)
+    user.load_from_db(db)
+    data = {
+        "url": posixpath.join(
+            "/", config.url_base, "file", post.type, post.user_name, media.file_name
+        ),
+        "preview": posixpath.join(
+            "/", config.url_base, "thumb", post.type, post.user_name, media.file_name
+        ),
+        "author": user.nick,
+        "author_id": post.user_name,
+        "avatar": f"{config.url_base}/avatar/{post.type}/{post.user_name}",
+        "likes": post.likes,
+        "comments": post.comments,
+        "reposts": post.reposts,
+        "description": post.text_content,
+        "post_id": post.post_id,
+        "media_id": media.media_id,
+        "fav": bool(db.query_rows(table="fav", key="post_id", value=post.post_id)),
+        "post_url": (
+            f"https://bsky.app/profile/{post.user_name}/post/{post.post_id}"
+            if post.type == "bsky"
+            else f"https://x.com/{post.user_name}/status/{post.post_id}"
+        ),
+        "user_url": f"{config.url_base}/user/{post.type}/{post.user_name}",
+        "time": post.time,
+    }
+    return jsonify(data)
+
+
+def init(db, skip_scan):
+    backend.scan_for_users("x", db)
+    backend.scan_for_users("bsky", db)
+    if not skip_scan:
+        backend.scan_for_posts("x", db)
+        backend.scan_for_media("x", db)
+        backend.scan_for_posts("bsky", db)
+        backend.scan_for_media("bsky", db)
+    db.conn.commit()
+    print("Scan finished.")
+
+    print("Building cache...")
+    backend.build_cache_all_posts_id(db)
+    print("Cache built.")
+
+
 db = backend.Database("test.db")
 db.prepare_db()
-
-backend.scan_for_users("x", db)
-backend.scan_for_users("bsky", db)
-if not args.skip_scan:
-    backend.scan_for_posts("x", db)
-    backend.scan_for_media("x", db)
-    backend.scan_for_posts("bsky", db)
-    backend.scan_for_media("bsky", db)
-db.conn.commit()
-
-backend.build_cache_all_posts_id(db)
-
+utils.global_running_flag = True
 worker = utils.DownloadWorker(db)
 worker.setDaemon(True)
 worker.start()
+print("Download worker started.")
+print("Ready.")
 
-app.run(host=config.host, port=config.port, debug=args.debug)
-utils.global_running_flag = False
-db.conn.close()
+
+def shutdown_cleanup():
+    utils.global_running_flag = False
+    db.conn.close()
+
+
+def signal_handler(signal, frame):
+    shutdown_cleanup()
+    sys.exit(0)
+
+
+def pass_args(skip_scan=False):
+    init(db, skip_scan)
+    return app
+
+
+if __name__ == "__main__":
+    init(db, args.skip_scan)
+    print(f"app is ready at: http://{config.host}:{config.port}/{config.url_base}")
+    app.run(host=config.host, port=config.port, debug=args.debug)
+    shutdown_cleanup()
+else:
+    signal.signal(signal.SIGTERM, signal_handler)

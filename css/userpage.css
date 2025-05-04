@@ -14,14 +14,14 @@
     width: 6rem;
     margin-left: 1rem;
     margin-top: -3rem;
-    border-radius: 1rem;
-    border: #222 0.3rem solid;
+    border-radius: 6rem;
+    border: var(--bg-light) 0.3rem solid;
 }
 
 .user_header {
     position: relative;
     margin-top: -0.4rem;
-    background-color: #222;
+    background-color: var(--bg-light);
     margin-bottom: 1rem;
     border-radius: 0 0 0.5rem 0.5rem;
     padding-bottom: 1rem;
@@ -47,41 +47,33 @@
 
 .user_header_button{
     position: absolute;
-    right: 1rem;
+    right: 0.5rem;
     top: 0.5rem;
-    height: 2rem;
-    width: 2rem;
+    height: 2.5rem;
+    width: 2.5rem;
     border-radius: 3rem;
-    background-color: #333;
+    background-color: var(--bg-color);
+}
+
+.user_header_button:hover{
+    background-color: #33333399 !important;
+    opacity: 1;
 }
 
 .user_header_button img{
     opacity: 0.7;
-    margin-left: 0.3rem;
-    margin-top: 0.3rem;
+    margin-left: 0.55rem;
+    margin-top: 0.55rem;
     height: 1.4rem;
     width: 1.4rem;
 }
 
-.media_toggle{
-    width: 100%;
-    text-align: center;
-    margin-bottom: 1rem;
-}
-
-.toggle {
-    display: inline-block;
-    border: 0.1rem solid #999;
-    color: #999;
-    height: 1.8rem;
-    line-height: 1.8rem;
-    width: 4rem;
-    border-radius: 2rem;
-    font-size: 0.8rem;
-}
-
-.toggle_selected {
-    background-color: #333;
-    border: 0.1rem solid #333;
-    color: #fff;
+.user_header_update_time{
+    position: absolute;
+    top: 0.78rem;
+    right: 6.3rem;
+    font-size: 0.7rem;
+    color: #aaa;
+    margin-left: 1rem;
+    margin-top: 0.5rem;
 }

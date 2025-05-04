@@ -4,6 +4,7 @@ bluesky/
 *cookies.txt
 tmp/
 *.db
+*.txt
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
